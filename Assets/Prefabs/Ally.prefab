@@ -45,11 +45,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21a98197cf35a9d478b874e55e6e9733, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetLayer:
-    serializedVersion: 2
-    m_Bits: 0
   moveSpeed: 20
   health: 50
+  heightOffset: 0
+  locOffset: 0
+  currentWaypointIndex: 0
+  nextWaypointIndex: 0
+  mobsInsideZones: 
+  spriteRenderer: {fileID: 6245929374652557914}
+  damageColor: {r: 1, g: 1, b: 1, a: 1}
+  originalColor: {r: 0.08627451, g: 0.79215693, b: 0, a: 1}
 --- !u!1 &8192722364217202452
 GameObject:
   m_ObjectHideFlags: 0

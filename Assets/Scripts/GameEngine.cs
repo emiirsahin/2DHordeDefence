@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Cinemachine;
 
 public class GameEngine : MonoBehaviour
 {
@@ -14,21 +15,23 @@ public class GameEngine : MonoBehaviour
     public Transform beginning; // Start waypoint
     public Transform end;       // End waypoint
 
-    [SerializeField] GameObject enemy;  // Enemy prefab
-    [SerializeField] GameObject ally;   // Ally prefab
-    [SerializeField] GameObject testObject; // Zone border visualizing prefab
+    [SerializeField] private GameObject enemy;  // Enemy prefab
+    [SerializeField] private GameObject ally;   // Ally prefab
+    [SerializeField] private GameObject testObject; // Zone border visualizing prefab
+    [SerializeField] private GameObject player;
+    [SerializeField] private CinemachineVirtualCamera virtualCamera;
+    private GameObject playerInstance;
 
     public Button allyButton;   // Spawn ally button
     public Button enemyButton;  // Spawn enemy button
     public Button manyButton;   // Spawn many, performance test button
     public int manyMobAmount = 50;  // Spawn many mob amount (each)
 
-    [HideInInspector] public List<Mob>[,] enemyLocations; // Array of zone lists containing enemies in each zone
-    [HideInInspector] public List<Mob>[,] allyLocations;  // Array of zone lists containing allies in each zone
+    [HideInInspector] public List<Agent>[,] enemyLocations; // Array of zone lists containing enemies in each zone
+    [HideInInspector] public List<Agent>[,] allyLocations;  // Array of zone lists containing allies in each zone
     [HideInInspector] public float[] zoneBorders;   // Array holding the borders of the zones
     [HideInInspector] public int[] enemiesInsideZones;
     [HideInInspector] public int[] alliesInsideZones;
-    
     [HideInInspector] public int numberOfLanes = 5;
 
     private int[] heightOffsets = { 4, -2, 4, 2, -4, -2, 4, 0, -4, 2,
@@ -37,7 +40,7 @@ public class GameEngine : MonoBehaviour
                                     4, -4, 2, -2, 0, 4, -4, 2, -2, 0,
                                     -4, 2, 0, 4, -2, 0, 2, -4, 4, -2 };
 
-    private int heightOffsetIndex = 0;
+    private int heightOffsetIndex = 0;   
 
     void Awake()
     {
@@ -59,22 +62,31 @@ public class GameEngine : MonoBehaviour
     void Start()
     {
         InitializeZones();
-        enemyLocations = new List<Mob>[zoneAmount, numberOfLanes];
+        enemyLocations = new List<Agent>[zoneAmount, numberOfLanes];
         enemiesInsideZones = new int[zoneAmount];
 
-        allyLocations = new List<Mob>[zoneAmount, numberOfLanes];
+        allyLocations = new List<Agent>[zoneAmount, numberOfLanes];
         alliesInsideZones = new int[zoneAmount];
 
         for (int i = 0; i < zoneAmount; i++)
         {
             for (int j = 0; j < numberOfLanes; j++)
             {
-                enemyLocations[i, j] = new List<Mob>();
-                allyLocations[i, j] = new List<Mob>();
+                enemyLocations[i, j] = new List<Agent>();
+                allyLocations[i, j] = new List<Agent>();
             }
             enemiesInsideZones[i] = 0;
             alliesInsideZones[i] = 0;
         }
+        InitializePlayer();
+    }
+
+    private void InitializePlayer()
+    {
+        playerInstance = Instantiate(player, new Vector3(0, 0, 0), Quaternion.identity);
+        virtualCamera.Follow = playerInstance.transform;
+        Agent playerInstanceAgent = playerInstance.GetComponent<Agent>();
+        AddMobToZone(playerInstanceAgent, 0, 0, true);
     }
 
     private void InitializeZones()
@@ -99,8 +111,8 @@ public class GameEngine : MonoBehaviour
     private void SpawnEnemy()
     {
         GameObject newEnemy = Instantiate(enemy, new Vector3(end.position.x, end.position.y, 0), Quaternion.identity);
-        Mob newEnemyMob = newEnemy.GetComponent<Mob>();
-        newEnemyMob.heightOffset = heightOffsets[heightOffsetIndex%50];
+        Agent newEnemyMob = newEnemy.GetComponent<Agent>();
+        newEnemyMob.heightOffset = heightOffsets[heightOffsetIndex % 50];
         AddMobToZone(newEnemyMob, zoneAmount - 1, heightOffsets[heightOffsetIndex % 50], false);
         heightOffsetIndex++;
     }
@@ -108,19 +120,19 @@ public class GameEngine : MonoBehaviour
     private void SpawnAlly()
     {
         GameObject newAlly = Instantiate(ally, new Vector3(beginning.position.x, beginning.position.y, 0), Quaternion.identity);
-        Mob newAllyMob = newAlly.GetComponent<Mob>();
-        newAllyMob.heightOffset = heightOffsets[heightOffsetIndex%50];
+        Agent newAllyMob = newAlly.GetComponent<Agent>();
+        newAllyMob.heightOffset = heightOffsets[heightOffsetIndex % 50];
         AddMobToZone(newAllyMob, 0, heightOffsets[heightOffsetIndex % 50], true);
-        heightOffsetIndex++;  
+        heightOffsetIndex++;
     }
 
-    public void MoveMobToZone(Mob mob, int curZoneIndex, int nextZoneIndex, int heightOffset, bool type) // Height offset is still a literal offset here, not an index, index is applied inside Add and Remove Mob methods.
+    public void MoveMobToZone(Agent mob, int curZoneIndex, int nextZoneIndex, int heightOffset, bool type) // Height offset is still a literal offset here, not an index, index is applied inside Add and Remove Mob methods.
     {
         AddMobToZone(mob, nextZoneIndex, heightOffset, type);
         RemoveMobFromZone(mob, curZoneIndex, heightOffset, type);
     }
 
-    public void AddMobToZone(Mob mob, int nextZoneIndex, int heightOffset, bool type)
+    public void AddMobToZone(Agent mob, int nextZoneIndex, int heightOffset, bool type)
     {
         if (type)
         {
@@ -134,7 +146,7 @@ public class GameEngine : MonoBehaviour
         }
     }
 
-    public void RemoveMobFromZone(Mob mob, int curZoneIndex, int heightOffset, bool type)
+    public void RemoveMobFromZone(Agent mob, int curZoneIndex, int heightOffset, bool type)
     {
         if (type)
         {
@@ -157,7 +169,8 @@ public class GameEngine : MonoBehaviour
         }
     }
 
-    public int HeightOffsetTranslateToIndex(int offset) {
+    public int HeightOffsetTranslateToIndex(int offset)
+    {
         return offset / 2 + 2;
     }
 }
